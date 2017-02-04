@@ -30,7 +30,7 @@ Used to connect V9-Odoo Application
     'depends': ['base'],
     'website': 'http://www.nexthope.net',
     'author': 'NextHope',
-    'data': ['connecteur.xml',],
+    'data': ['data/connecteur.xml',],
     'demo': [],
     'auto_install': False,
     'installable': True,
