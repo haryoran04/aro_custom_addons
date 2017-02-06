@@ -19,7 +19,9 @@
 #
 ###########################################################################
 from openerp import fields, models, api
+
 from openerp.exceptions import Warning, ValidationError, except_orm
+
 class f_prime(models.Model):
     _inherit = 'f.prime'
     
@@ -28,7 +30,14 @@ class f_prime(models.Model):
     PRM_CAPITAL = fields.Char()
     PRM_SMP = fields.Char()
     PRM_TAUX_FAC = fields.Char()
-
+    PRM_NUMERO=fields.Char()
+    PRM_PTRCLIIDENT = fields.Float()
+    PRM_PTRINTID = fields.Float()
+    PRM_PTRAPID = fields.Float()
+    PRM_ETABLISSEMENT = fields.Char()
+    PRM_PTRPRAIDENT = fields.Float()
+    
+    
     
 class f_prime_ligne(models.Model):
     _inherit = 'f.prime.ligne'

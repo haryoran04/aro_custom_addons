@@ -588,7 +588,7 @@ class f_prime(models.Model):
         inv_line_values = []        
         if  self.PRM_LPRIDENT: 
             for prime_line in self.PRM_LPRIDENT:            
-                if prime_line.LPR_ASSCODCPT  not in [False,"FRAIS", "TVA","TVAAC"]:
+                if prime_line.LPR_ASSCODCPT  not in [False,"FRAIS", "TVA","TVAAC","FRIMP","FRTER"]:
                     product_search = objProduct.search([('name','=',prime_line.LPR_ASSCODCPT),('categ_id','=',categ_id)])                    
                     product =  product_search                                            
                     ##### determiner la taxe te ####################                    
@@ -670,8 +670,8 @@ class f_prime(models.Model):
                                                        }
                                             ])     
                 ########## Recuperation de l accessoire #######################
-                if prime_line.LPR_ASSCODCPT == 'FRAIS':
-                    te = 'Te-'+ str(prime_line.LPR_TAXASSTX)                                                  
+                if prime_line.LPR_ASSCODCPT in [True,"FRAIS","FRIMP","FRTER"]:
+                    te = 'Te-'+ str(prime_line.LPR_TAXASSTX)                                          
                     id_taxe = self.env['account.tax'].search([('description','=', te)])                                        
                     id_line_tax = False                                       
                     ################ New added ###################                                    
@@ -736,7 +736,7 @@ class f_prime(models.Model):
                     
                     ##### recuperation accessoire ###################  
                     ########## Append accesoire on invoice line like a product#################
-                    self.env.cr.execute('SELECT SUM("LPR_FRACIE") FROM f_prime_ligne WHERE "LPR_PTRPRMIDENT" = %s AND "LPR_ASSCODCPT" LIKE %s',(self.id,'FRAIS',))
+                    self.env.cr.execute('SELECT SUM("LPR_FRACIE") FROM f_prime_ligne WHERE "LPR_PTRPRMIDENT" = %s AND "LPR_ASSCODCPT" LIKE %s',(self.id,'FR',))
                     dataAcc = self.env.cr.fetchall()
                    
                     accessoire = 0.0
