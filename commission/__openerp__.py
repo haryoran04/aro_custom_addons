@@ -30,7 +30,7 @@ Commissions - Client final module - ARO
     'depends': ['base','account'],
     'website': 'http://www.nexthope.net',
     'author': 'NextHope',
-    'data': ['commission_view.xml'],
+    'data': ['data/connecteur.xml',],
     'demo': [],
     'auto_install': False,
     'installable': True,
