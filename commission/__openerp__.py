@@ -2,7 +2,8 @@
 ###############################################################################
 #
 #    Odoo, Open Source Management Solution
-#    Copyright (C) 2015-Today NextHope Business Solutions <contact@nexthope.net>
+#    Copyright (C) 2015-Today NextHope Business Solutions
+#    <contact@nexthope.net>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -27,10 +28,12 @@ Commissions - Client final module - ARO
 ===========================================
 **Credits:** NextHope.
 """,
-    'depends': ['base','account'],
+    'depends': ['base', 'account'],
     'website': 'http://www.nexthope.net',
     'author': 'NextHope',
-    'data': ['data/connecteur.xml',],
+    'data': [
+        #'data/connecteur.xml',
+    ],
     'demo': [],
     'auto_install': False,
     'installable': True,
