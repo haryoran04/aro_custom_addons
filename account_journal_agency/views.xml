@@ -1,0 +1,96 @@
+<openerp>
+    <data>
+        <record id="view_account_move_line_tree_inherit" model="ir.ui.view">
+            <field name="name">account.move.line.inherit</field>
+            <field name="model">account.move.line</field>
+            <field name="inherit_id" ref="account.view_move_line_tree"/>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <field name="name" position="after">
+                    <field name="agency_id"/>
+                </field>
+            </field>
+        </record>
+        
+        <record id="hr_employee_agency" model="ir.ui.view">
+	        <field name="name">Employé</field>
+	        <field name="model">hr.employee</field>
+			<field name="inherit_id" ref="hr.view_employee_form" />			
+			<field name="type">form</field>	        
+			<field name="arch" type="xml">
+				<field name="work_location" position="after">        		
+					<field name="agency_id"/>
+	           	</field>
+	        </field>
+    	</record>
+
+        <record id="res_users_agency" model="ir.ui.view">
+	        <field name="name">Users</field>
+	        <field name="model">res.users</field>
+			<field name="inherit_id" ref="base.view_users_form" />			
+			<field name="type">form</field>	        
+			<field name="arch" type="xml">
+				<field name="partner_id" position="after">        		
+					<field name="agency_id"/>
+	           	</field>
+	        </field>
+    	</record>        
+        
+        <record id="account_journal_agency" model="ir.ui.view">
+	        <field name="name">account.journal_agency</field>
+	        <field name="model">account.journal</field>
+			<field name="inherit_id" ref="account.view_account_journal_form" />			
+			<field name="type">form</field>	        
+			<field name="arch" type="xml">
+				<field name="user_id" position="after">	               		
+					<field name="agency_id"/>
+	           	</field>
+	        </field>
+    	</record>
+        
+
+    	<record model="ir.ui.view" id="view_base_agency_tree">
+    	    <field name="name">base.agency.tree</field>
+    	    <field name="model">base.agency</field>
+    	    <field name="type">tree</field>
+    	    <field name="priority">0</field>
+    	    <field name="arch" type="xml">
+    	        <tree>
+    	        	<field name="code" />
+    	        	<field name="name" />
+                        <field name="parent_id" />
+    	        </tree>
+    	    </field>
+    	</record>
+
+        <record id="base_agency_action" model="ir.actions.act_window">
+            <field name="name">Base Agency Action</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">base.agency</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+
+        <menuitem
+            id="base.agency"
+            name="Agences"
+            string="Agences"
+            action="base_agency_action"
+            parent="base.menu_res_company_global"/>
+    <record id="account.view_account_entries_report_graph" model="ir.ui.view">
+         <field name="name">account.entries.report.graph</field>
+         <field name="model">account.entries.report</field>
+         <field name="arch" type="xml">
+             <graph string="Entries Analysis" type="pivot">
+                <field name="agency_id" type="row"/>
+                <field name="user_type" type="row"/>
+                <field name="period_id" type="col"/>
+                <field name="debit" type="measure"/>
+                <field name="credit" type="measure"/>
+                <field name="balance" type="measure"/>
+             </graph>
+         </field>
+    </record>
+</data>
+</openerp>

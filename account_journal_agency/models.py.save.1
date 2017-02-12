@@ -1,0 +1,56 @@
+# -*- coding: utf-8 -*-
+
+from openerp import models, fields, api
+import logging
+logger = logging.getLogger(__name__)
+
+class base_agency(models.Model):
+    _name = 'base.agency'
+    
+    name = fields.Char('Agence')
+    code = fields.Char('Code',size=4)
+
+class account_journal(models.Model):
+    _inherit = 'account.journal'
+
+    agency_id = fields.Many2one('base.agency','Agence')
+
+    @api.v7
+    def false_search(self,cr,uid,args, offset=0, limit=None, order=None, context=None, count=False, xtra=None):
+        new_args=[]
+        user = self.pool.get('res.users').browse(cr, uid, uid, context=context)
+        for groups in user.groups_id:
+            logger.info(groups.name)
+
+        for arg in args:
+            if type(arg) == list:
+               arg = tuple(arg)
+            if type(arg) is not tuple:
+                new_args += arg
+                continue
+            else:
+                new_args += [arg]
+#        if uid!=1:
+#            new_args += [('agency_id', '=', user.agency_id.id)]
+        return super(account_journal, self).search(cr,uid,new_args, offset, limit, order, context, count)
+
+class account_move_line(models.Model):
+    _inherit = 'account.move.line'
+
+    agency_id = fields.Many2one('base.agency',related='journal_id.agency_id')
+q
+class hr_employee(models.Model):
+    _inherit = 'hr.employee'
+
+    agency_id = fields.Many2one('base.agency','Agence')
+    
+
+class res_users(models.Model):
+    _inherit = 'res.users'
+
+    agency_id = fields.Many2one('base.agency',related='employee_ids.agency_id')
+
+class account_voucher(models.Model):
+    _inherit = 'account.voucher'
+
+    #journal_id = fields.Many2one('account.journal', 'Journal', required=True, readonly=True, states={'draft':[('readonly',False)]},domain=[('agency_id','=',user.agency_id.id)])       
