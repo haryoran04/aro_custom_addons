@@ -24,7 +24,7 @@ class res_partner(osv.osv):
         'v_neuf': fields.boolean('Client V9'),
         'stat': fields.char('Stat',size=32),
         'cif': fields.char('CIF',size=32),
-        'agency_id': fields.many2one('res.agency', 'Agency', help='Agency assigned'),
+        'agency_id': fields.many2one('base.agency', 'Agency', help='Agency assigned'),
     }
 
     def v9_fetch_invoice(self,cr,uid,ids,context=None):
