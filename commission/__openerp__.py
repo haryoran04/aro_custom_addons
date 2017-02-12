@@ -33,6 +33,7 @@ Commissions - Client final module - ARO
     'author': 'NextHope',
     'data': [
         #'data/connecteur.xml',
+        'views/commission_view.xml',
     ],
     'demo': [],
     'auto_install': False,
