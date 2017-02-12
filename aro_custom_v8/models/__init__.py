@@ -11,3 +11,4 @@ import partner
 import account_move_line
 import product_category
 import product_template
+import res_apporteur
