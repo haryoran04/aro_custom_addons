@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 {
-    'name': "account_journal_agency",
+    'name': "Account journal agency",
 
     'summary': """
         Ajout de notion d´agence dans les journaux""",
@@ -19,13 +19,13 @@
     'version': '0.1',
 
     # any module necessary for this one to work correctly
-    'depends': ['base','hr','account'],
+    'depends': ['base', 'hr', 'account'],
 
     # always loaded
     'data': [
         # 'security/ir.model.access.csv',
         'templates.xml',
-        'views.xml',        
+        'views.xml',
     ],
     # only loaded in demonstration mode
     'demo': [
