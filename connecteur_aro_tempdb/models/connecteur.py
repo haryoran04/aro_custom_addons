@@ -55,11 +55,11 @@ from tdc"""
 map_app = {
     'agence': 'agency',
     'old': 'code',
-    'new': '',
-    'titre',
-    'nom',
-    'prenom',
-    'statut'
+    'new': 'new',
+    'titre': 'title',
+    'nom': 'name',
+    'prenom': 'firstname',
+    'statut': 'statut'
 }
 request_sql = """ select top 10
                    codeag,courtier1,courtier2,
@@ -76,7 +76,8 @@ request_sql2 = """ select
 default_code, NUMPOL , DATEEFFET prm_datedeb, DATEECHEANCE prm_datefin,
 rtrim(ltrim(MMCPT)) +'/'+rtrim(ltrim(str(AACPT))) period,
 CODEAG, DATECOMPTABLE, ORDRE, COMPTE, TITRE, NOM40, ADRESSE1, ULIBELLE,
-COURTIER1, COURTIER2, NUM_COMMCRT1, NUM_COMMCRT2, NUM_PRIMENET, NUM_ACCESS, NUM_TE, NUM_TVA,*
+COURTIER1, COURTIER2, NUM_COMMCRT1, NUM_COMMCRT2, NUM_PRIMENET, NUM_ACCESS,
+NUM_TE, NUM_TVA,*
 from tempdb_odoo where AACPT=2015
 """
 map_sql2 = {
@@ -86,7 +87,7 @@ map_sql2 = {
     'DATEECHEANCE': 'prm_datefin',
     'period': 'period',
     'CODEAG': 'codeag',
-    'DATECOMPTABLE' 'date_comptable',
+    'DATECOMPTABLE': 'date_comptable',
     'ORDRE': 'ordre',
     'COMPTE': 'compte',
     'TITRE': 'title',
