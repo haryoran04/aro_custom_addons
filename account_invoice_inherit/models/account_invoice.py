@@ -19,18 +19,16 @@
 #
 ##############################################################################
 
-from openerp import SUPERUSER_ID
-from openerp import models, api, fields
-from _dbus_bindings import String
+from openerp import models, fields
+# from _dbus_bindings import String
 
-# Table maitre
+
 class account_invoice(models.Model):
-    
-    _inherit = "account.invoice"     
-        
-    pol_numpol = fields.Char(string="Numero Police")    
+
+    _inherit = "account.invoice"
+
+    pol_numpol = fields.Char(string="Numero Police")
     prm_datedeb = fields.Date(string="Date Effet")
     prm_datefin = fields.Date(string="Date Echéance")
-    prm_numero_quittance = fields.Char(string="Numero Quittance") 
+    prm_numero_quittance = fields.Char(string="Numero Quittance")
     prm_ident_invoice = fields.Float()
-    
