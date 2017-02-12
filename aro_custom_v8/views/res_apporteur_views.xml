@@ -11,10 +11,12 @@
                 <field name="name"/>
                 <field name="ap_code"/>
                 <field name="agency_id"/>
+                <field name="serial_identification"/>
+                <field name="statut"/>
             </tree>
             </field>
         </record>
-        
+
         <record id="view_res_apporteur_form" model="ir.ui.view">
             <field name="name">res.apporteur.form</field>
             <field name="model">res.apporteur</field>
@@ -34,12 +36,14 @@
                             <field name="agency_id"/>
                             <field name="title"/>
                             <field name="ap_code"/>
+                            <field name="serial_identification"/>
+                            <field name="statut"/>
                         </group>
                     </sheet>
                 </form>
             </field>
         </record>
-        
+
         <record model="ir.actions.act_window" id="act_open_res_apporteur_view">
             <field name="name">Apporteur</field>
             <field name="type">ir.actions.act_window</field>
@@ -49,21 +53,21 @@
             <field name="domain">[]</field>
             <field name="context">{}</field>
         </record>
-        
+
         <record model="ir.actions.act_window.view" id="act_open_res_apporteur_view_form">
             <field name="act_window_id" ref="act_open_res_apporteur_view"/>
             <field name="sequence" eval="20"/>
             <field name="view_mode">form</field>
             <field name="view_id" ref="view_res_apporteur_form"/>
         </record>
-        
+
         <record model="ir.actions.act_window.view" id="act_open_res_apporteur_view_tree">
             <field name="act_window_id" ref="act_open_res_apporteur_view"/>
             <field name="sequence" eval="10"/>
             <field name="view_mode">tree</field>
             <field name="view_id" ref="view_res_apporteur_tree"/>
         </record>
-        
+
         <menuitem id="menu_res_apporteur"
             parent="base.menu_sales"
             sequence="20"

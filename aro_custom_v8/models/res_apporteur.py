@@ -16,3 +16,5 @@ class ResApporteur(models.Model):
     agency_id = fields.Many2one(related='partner_id.agency_id', inherited=True)
     title = fields.Many2one(related='partner_id.title', inherited=True)
     ap_code = fields.Char(string='AP code', size=8)
+    serial_identification = fields.Char(string='Serial Id', size=8)
+    statut = fields.Char(string='Statut', size=16)
