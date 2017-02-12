@@ -21,7 +21,8 @@
 ###########################################################################
 from openerp import models, api, exceptions, _
 
-# import datetime
+import datetime
+import decimal
 import pypyodbc
 import logging
 # import re
@@ -36,6 +37,71 @@ UID = 'sa'
 PWD = 'Aro1'
 TDS_Version = '7.0'
 
+map_gnrl = {}
+"""
+map_rqt = {
+    '': ,
+    '': ,
+    '': ,
+    '': ,
+    '': ,
+    '': ,
+    '': ,
+    '': ,
+}
+"""
+request_apporteur = """select agence,old,new,titre,nom,prenom,statut
+from tdc"""
+map_app = {
+    'agence': 'agency',
+    'old': 'code',
+    'new': '',
+    'titre',
+    'nom',
+    'prenom',
+    'statut'
+}
+request_sql = """ select top 10
+                   codeag,courtier1,courtier2,
+                   compte,titre,nom40,
+                   numpol,dateeffet,dateecheance,codebranc,codecateg,vtable,
+                   vdureectr,vdureepai,vmodepai,cpa,cpu,
+                   numaven,aarattach,mmrattach,aacpt,mmcpt,codecarte,ordre,
+                   codefic,num_primenet,num_access,num_te,num_tva,num_primetot,
+                   num_commag,num_commcrt1,num_commcrt2,num_interav,
+                   datecomptable,tmv
+            from tempdb where  aacpt = 2015 """
+
+request_sql2 = """ select
+default_code, NUMPOL , DATEEFFET prm_datedeb, DATEECHEANCE prm_datefin,
+rtrim(ltrim(MMCPT)) +'/'+rtrim(ltrim(str(AACPT))) period,
+CODEAG, DATECOMPTABLE, ORDRE, COMPTE, TITRE, NOM40, ADRESSE1, ULIBELLE,
+COURTIER1, COURTIER2, NUM_COMMCRT1, NUM_COMMCRT2, NUM_PRIMENET, NUM_ACCESS, NUM_TE, NUM_TVA,*
+from tempdb_odoo where AACPT=2015
+"""
+map_sql2 = {
+    'default_code': 'default_code',
+    'NUMPOL': 'pol_numpol',
+    'DATEEFFET': 'prm_datedeb',
+    'DATEECHEANCE': 'prm_datefin',
+    'period': 'period',
+    'CODEAG': 'codeag',
+    'DATECOMPTABLE' 'date_comptable',
+    'ORDRE': 'ordre',
+    'COMPTE': 'compte',
+    'TITRE': 'title',
+    'NOM40': 'name',
+    'ADRESSE1': 'street',
+    'ULIBELLE': 'city',
+    'COURTIER1': 'app_a',
+    'COURTIER2': 'app_b',
+    'NUM_COMMCRT1': 'code_app_a',
+    'NUM_COMMCRT2': 'code_app_b',
+    'NUM_PRIMENET': 'price_unit',
+    'NUM_ACCESS': 'access_amount',
+    'NUM_TE': 'tax_te',
+    'NUM_TVA': 'tax_tva',
+}
 
 class connecteur(models.Model):
     _name = 'connecteur.aro'
@@ -106,25 +172,27 @@ class connecteur(models.Model):
         # res_partner_title
         res[el_req[0]] = {'name': data.get('tdb_titre', False),
                           'shortcut': data.get('tdb_titre', False)}
-        # client_cour = [tdb_codeag,tdb_compte,tdb_titre,tdb_nom40,tdb_datecomptable]
+        # client_cour = [tdb_codeag,tdb_compte,tdb_titre,tdb_nom40,
+        # tdb_datecomptable]
         # res_partner -> customer
         res[el_req[1]] = {
             'name': data.get('tdb_nom40'),
             'customer': True,
-            'ref': data.get('tdb_codeag') + data.get('tdb_compte'),
+            'ref': '41' + data.get('tdb_codeag') + '' + data.get('tdb_compte'),
             'title': data.get('tdb_titre', False),
         }
         # product_product
         res[el_req[3]] = {
             'name': '',
-            'default_code': data.get('tdb_tmv') + data.get('tdb_codebranc') + data.get('tdb_codecateg')
+            'default_code': data.get('tdb_tmv') + data.get('tdb_codebranc') +
+            data.get('tdb_codecateg')
         }
         return res
 
     @api.multi
     def check_partner_title(self, data):
-        opts = ['MR','MME','STE','00000']
-        title_obj = self.env['res.partner.title']
+        opts = ['MR', 'MME', 'STE', '00000']
+        # title_obj = self.env['res.partner.title']
         res = False
         if data.get('shortcut') == opts[0]:
             res = self.env.ref('base.res_partner_title_sir')
@@ -144,13 +212,16 @@ class connecteur(models.Model):
         if data.get('ref', False):
             partner_src = partner_obj.search([('ref', '=', data.get('ref'))])
             if partner_src and len(partner_src) > 1:
-                raise exceptions.Warning(_('Error'), _('More than one partner found with ref %s' % data.get('ref')))
+                raise exceptions.Warning(_('Error'),
+                                         _('More than one partner found with \
+                                           ref %s' % data.get('ref')))
             elif partner_src and len(partner_src) == 1:
                 res = partner_src
             elif not partner_src:
                 # create new partner
                 comp = self.env.ref('base.res_partner_title_pvt_ltd')
-                data['title'] = self.check_partner_title({'name': data.get('title'), 'shortcut': data.get('title')})
+                data['title'] = self.check_partner_title({
+                    'name': data.get('title'), 'shortcut': data.get('title')})
                 if data.get('title'):
                     if data.get('title') == comp:
                         data['is_company'] = True
@@ -164,11 +235,41 @@ class connecteur(models.Model):
             return res
         return res
 
+    @api.multi
+    def map_cursor_content(self, cursor_to_map, use_map={}):
+        if not cursor_to_map:
+            return False
+        if not use_map:
+            use_map = map_gnrl
+        res = []
+        columns = [column[0] for column in cursor_to_map.description]
+        _logger.info('\n=== columns = %s === \n' % columns)
+        for row in cursor_to_map:
+            col_counter = 0
+            data = {}
+            for col in columns:
+                #_logger.info('\n=== %s,%s,%s === ' % (col, row[col_counter],type(row[col_counter])))
+                if type(row[col_counter]) == datetime.datetime:
+                    data[col] = row[col_counter].strftime("%Y-%m-%d")
+                elif type(row[col_counter]) == decimal.Decimal:
+                    data[col] = float(row[col_counter])
+                elif type(row[col_counter]) == int:
+                    data[col] = int(row[col_counter])
+                elif type(row[col_counter]) == str:
+                    data[col] = str(row[col_counter])
+                else:
+                    data[col] = row[col_counter]
+                col_counter += 1
+            _logger.info('\n=== data = %s === ' % data)
+            res.append(data)
+        return res
+
     @api.model
     def update_add_record(self):
 
         _logger.info('\n=== Try Connect on SQL Server ===\n')
         connection = False
+        cursorSQLServer = False
         prm = "DRIVER=%s;SERVER=%s;PORT=%s;DATABASE=%s;UID=%s;PWD=%s;\
                 TDS_Version=%s" % (DRIVER, SERVER, PORT, DATABASE,
                                    UID, PWD, TDS_Version)
@@ -176,38 +277,31 @@ class connecteur(models.Model):
             #connection = pypyodbc.connect("DRIVER=FreeTDS;SERVER=10.0.0.92;
             # PORT=1433;DATABASE=dwh_stat;UID=sa;PWD=Aro1;TDS_Version=7.0")
             connection = pypyodbc.connect(prm)
+            cursorSQLServer = connection.cursor()
+            cursorSQLServer.execute(request_sql)
         except Exception, e:
-            raise exceptions.Warning(_('Error'), _('Can\'t connect to SQL Server %s' % e))
+            raise exceptions.Warning(_('Error'),
+                                     _('Can\'t connect to SQL Server %s' % e))
         _logger.info('\n=== Connected  ===\n')
 
-        numenreg = 0
-        cursorSQLServer = connection.cursor()
-        request_sql = """ select top 10
-                           codeag,courtier1,courtier2,
-                           compte,titre,nom40,
-                           numpol,dateeffet,dateecheance,codebranc,codecateg,vtable,
-                           vdureectr,vdureepai,vmodepai,cpa,cpu,
-                           numaven,aarattach,mmrattach,aacpt,mmcpt,codecarte,ordre,codefic,
-                           num_primenet,num_access,num_te,num_tva,num_primetot,
-                           num_commag,num_commcrt1,num_commcrt2,num_interav,
-                           datecomptable,tmv
-                    from tempdb where  aacpt = 2015 """
-        cursorSQLServer.execute(request_sql)
+        # numenreg = 0
+        correct_data = self.map_cursor_content(cursorSQLServer)
         resultsSQLtempdb = cursorSQLServer.fetchall()
         mapped_datas = self.map_data(resultsSQLtempdb)
-        _logger.info('\n=== mapped_datas = %s === \n' % type(mapped_datas))
+        #_logger.info('\n=== mapped_datas = %s === \n' % type(mapped_datas))
         for mapped_data in mapped_datas:
             # we work only with one data, not with all of them
-            invoice_vals = {'partner_id': False, 'invoice_line': [(6, 0, [False])]}
+            invoice_vals = {'partner_id': False,
+                            'invoice_line': [(6, 0, [False])]}
             dpt_datas = self.dispatch_mapped_data(mapped_data)
-            _logger.info('\n=== dpt_datas = %s === \n' % dpt_datas)
+            #_logger.info('\n=== dpt_datas = %s === \n' % dpt_datas)
             # Check res_partner_title
             #partner_title = self.check_partner_title(dpt_datas.get('partner_title'))
             # Check if customer exist
             invoice_vals['partner_id'] = self.check_partner_customer(dpt_datas.get('partner_customer'))
             if invoice_vals.get('partner_id', False):
                 invoice_vals['partner_id'] = invoice_vals.get('partner_id', False).id
-            _logger.info('\n=== invoice_vals = %s === \n' % invoice_vals)
+            #_logger.info('\n=== invoice_vals = %s === \n' % invoice_vals)
             #partner_vals = {}
             #client_cour = [tdb_codeag,tdb_compte,tdb_titre,tdb_nom40,tdb_datecomptable]
             #id_client = self.voir_client(client_cour)
