@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+        <data>
+            <record id="invoice_form_inherit_polnumpol" model="ir.ui.view">
+            <field name="name">account.invoice.form.inherit.ajout</field>
+            <field name="model">account.invoice</field>
+            <field name="inherit_id" ref="account.invoice_form"/>           
+            <field name="arch" type="xml">
+                <data>              
+                    <xpath expr="//form[@string='Invoice']/sheet/group/group/field[@name='partner_id']" position="after">                      
+                        
+                        <field name="pol_numpol" />
+						<field name="prm_datedeb" />
+						<field name="prm_datefin" />
+						<field name="prm_numero_quittance" />
+						
+                    </xpath>
+                    <!-- <field name="partner_id" position="after">
+                        <field name="pol_numpol"/>
+                    </field> -->
+
+                </data>
+            </field>
+            </record>
+        </data>
+</openerp>
