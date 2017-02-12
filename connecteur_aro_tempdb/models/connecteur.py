@@ -50,15 +50,14 @@ map_rqt = {
     '': ,
 }
 """
-request_apporteur = """select agence,old,new,titre,nom,prenom,statut
+request_app = """select agence,old,new,titre,nom + ' ' + prenom name ,statut
 from tdc"""
 map_app = {
-    'agence': 'agency',
-    'old': 'code',
-    'new': 'new',
+    'agence': 'agency_id',
+    'old': 'serial_identification',
+    'new': 'ap_code',
     'titre': 'title',
-    'nom': 'name',
-    'prenom': 'firstname',
+    'name': 'name',
     'statut': 'statut'
 }
 request_sql = """ select top 10
@@ -72,37 +71,38 @@ request_sql = """ select top 10
                    datecomptable,tmv
             from tempdb where  aacpt = 2015 """
 
-request_sql2 = """ select
+request_sql2 = """ select top 20
 default_code, NUMPOL , DATEEFFET prm_datedeb, DATEECHEANCE prm_datefin,
 rtrim(ltrim(MMCPT)) +'/'+rtrim(ltrim(str(AACPT))) period,
 CODEAG, DATECOMPTABLE, ORDRE, COMPTE, TITRE, NOM40, ADRESSE1, ULIBELLE,
 COURTIER1, COURTIER2, NUM_COMMCRT1, NUM_COMMCRT2, NUM_PRIMENET, NUM_ACCESS,
-NUM_TE, NUM_TVA,*
+NUM_TE, NUM_TVA
 from tempdb_odoo where AACPT=2015
 """
 map_sql2 = {
     'default_code': 'default_code',
-    'NUMPOL': 'pol_numpol',
-    'DATEEFFET': 'prm_datedeb',
-    'DATEECHEANCE': 'prm_datefin',
+    'numpol': 'pol_numpol',
+    'dateeffet': 'prm_datedeb',
+    'dateecheance': 'prm_datefin',
     'period': 'period',
-    'CODEAG': 'codeag',
-    'DATECOMPTABLE': 'date_comptable',
-    'ORDRE': 'ordre',
-    'COMPTE': 'compte',
-    'TITRE': 'title',
-    'NOM40': 'name',
-    'ADRESSE1': 'street',
-    'ULIBELLE': 'city',
-    'COURTIER1': 'app_a',
-    'COURTIER2': 'app_b',
-    'NUM_COMMCRT1': 'code_app_a',
-    'NUM_COMMCRT2': 'code_app_b',
-    'NUM_PRIMENET': 'price_unit',
-    'NUM_ACCESS': 'access_amount',
-    'NUM_TE': 'tax_te',
-    'NUM_TVA': 'tax_tva',
+    'codeag': 'agency_id',
+    'datecomptable': 'date_comptable',
+    'ordre': 'ordre',
+    'compte': 'compte',
+    'titre': 'title',
+    'nom40': 'name',
+    'adresse1': 'street',
+    'ulibelle': 'city',
+    'courtier1': 'serial_identification_a',
+    'courtier2': 'serial_identification_b',
+    'num_commcrt1': 'code_app_a',
+    'num_commcrt2': 'code_app_b',
+    'num_primenet': 'price_unit',
+    'num_access': 'access_amount',
+    'num_te': 'tax_te',
+    'num_tva': 'tax_tva',
 }
+
 
 class connecteur(models.Model):
     _name = 'connecteur.aro'
@@ -155,38 +155,98 @@ class connecteur(models.Model):
         return res
 
     @api.multi
+    def map_specified_data(self, data, map_to_use={}):
+        """
+        :param data: Is a dict
+        """
+        _logger.info('\n=== in map_specified_data ===\n')
+        if not data:
+            _logger.info('\n=== map_sd False ===\n')
+            return False
+        if not map_to_use:
+            _logger.info('\n=== no mapping ===\n')
+            return data
+        #_logger.info('\n=== map_to_use = %s === \n' % map_to_use)
+        buf = {}
+        for elt in data:
+            if map_to_use.get(elt):
+                buf[map_to_use.get(elt)] = data.get(elt)
+            else:
+                buf[elt] = data.get(elt)
+        #_logger.info('\n=== data in = %s === \n' % data)
+        #_logger.info('\n=== data out = %s === \n' % buf)
+        return buf
+
+    @api.multi
     def dispatch_mapped_data(self, data):
         """
         :param: data: Is a dict
         """
+        _logger.info('\n=== in dispatch_mapped_data = %s === \n' % data)
         el_req = [
             'partner_title',
             'partner_customer',
-            'partner_apporteur',
+            'partner_apporteur_a',
+            'partner_apporteur_b',
             'product',
             'tax_te',
             'tax_tva',
             'journal',
             'account',
+            'invoice_line',
+            'invoice',
         ]
         res = {}
         # res_partner_title
-        res[el_req[0]] = {'name': data.get('tdb_titre', False),
-                          'shortcut': data.get('tdb_titre', False)}
+        res[el_req[0]] = {'name': data.get('title', False),
+                          'shortcut': data.get('title', False)}
         # client_cour = [tdb_codeag,tdb_compte,tdb_titre,tdb_nom40,
         # tdb_datecomptable]
         # res_partner -> customer
+        dfc = '0'
+        if data.get('default_code')[0] == 'T':
+            dfc = '1'
+        elif data.get('default_code')[0] == 'M':
+            dfc = '2'
+        elif data.get('default_code')[0] == 'V':
+            dfc = '3'
+        else:
+            raise exceptions.Warning(_('Error'), _('Not found <%s>' % data.get('default_code')[0]))
         res[el_req[1]] = {
-            'name': data.get('tdb_nom40'),
+            'name': data.get('name'),
             'customer': True,
-            'ref': '41' + data.get('tdb_codeag') + '' + data.get('tdb_compte'),
-            'title': data.get('tdb_titre', False),
+            'ref': '41' + data.get('agency_id') + dfc + data.get('compte'),
+            'title': data.get('title', False),
+        }
+        # res_apporteur
+        res[el_req[2]] = {
+            'agency_id': data.get('agency_id'),
+            'serial_identification': data.get('serial_identification_a'),
+        }
+        res[el_req[3]] = {
+            'agency_id': data.get('agency_id'),
+            'serial_identification': data.get('serial_identification_b'),
         }
         # product_product
-        res[el_req[3]] = {
-            'name': '',
-            'default_code': data.get('tdb_tmv') + data.get('tdb_codebranc') +
-            data.get('tdb_codecateg')
+        res[el_req[4]] = {'default_code': data.get('default_code')}
+        res[el_req[5]] = {}
+        res[el_req[6]] = {}
+        res[el_req[7]] = {}
+        res[el_req[8]] = {}
+        res[el_req[9]] = {'product_id': data.get('default_code'), 'price_unit': float(data.get('price_unit'))}
+        agency_id = self.env['base.agency'].search([('code', '=', data.get('agency_id'))]).id
+        # TODO
+        # Find the right criteria for journal_id to use for now we just limit it to one
+        journal_id = self.env['account.journal'].search([('type', '=', 'sale'), ('agency_id', '=', agency_id)], limit=1).id
+        if not journal_id:
+            journal_id = self.env['account.journal'].search([('type', '=', 'sale')], limit=1).id
+        res[el_req[10]] = {
+            'pol_numpol': data.get('pol_numpol'),
+            'prm_datedeb': data.get('prm_datedeb'),
+            'prm_datefin': data.get('prm_datefin'),
+            'prm_numero_quittance': data.get('ordre'),
+            'journal_id': journal_id,
+            'account_id': self.env['account.account'].search([('code', '=', '410000')]).id,
         }
         return res
 
@@ -200,7 +260,7 @@ class connecteur(models.Model):
         elif data.get('shortcut') == opts[1]:
             res = self.env.ref('base.res_partner_title_madam')
         elif data.get('shortcut') == opts[2]:
-            res = self.env.ref('base.res_partner_pvt_ltd')
+            res = self.env.ref('base.res_partner_title_pvt_ltd')
         else:
             _logger.info('\n=== data = %s === \n' % data)
             return res
@@ -237,6 +297,85 @@ class connecteur(models.Model):
         return res
 
     @api.multi
+    def check_partner_apporteur(self, cr_sql, data):
+        res = False
+        apporteur_obj = self.env['res.apporteur']
+        agency_obj = self.env['base.agency']
+        agency_id = data.get('agency_id', False)
+        agency_src = False
+        apporteur_src = False
+        if agency_id:
+            agency_src = agency_obj.search([('code', '=', agency_id)])
+        if agency_src:
+            serial_id = data.get('serial_identification', False)
+            if serial_id and serial_id != '000':
+                apporteur_src = apporteur_obj.search(
+                    [('serial_identification', '=', serial_id), ('agency_id', '=', agency_src.id)])
+                if apporteur_src:
+                    return apporteur_src
+                else:
+                    # TODO
+                    sql_app = request_app + " where agence='%s' and old='%s'" % (agency_src.code,serial_id)
+                    cr_sql.execute(sql_app)
+                    apps_mapped = self.map_cursor_content(cr_sql, map_app)
+                    map_buff = {}
+                    for app_mapped in apps_mapped:
+                        for k,v in app_mapped.items():
+                            map_buff[map_app[k]] = v
+                    map_buff['title'] = self.check_partner_title(
+                        {'name': map_buff.get('title').upper(),
+                         'shortcut': map_buff.get('title').upper()
+                        })
+                    if map_buff.get('title', False):
+                        map_buff['title'] = map_buff.get('title').id
+                    map_buff['agency_id'] = agency_obj.search([('code', '=', map_buff.get('agency_id'))]).id
+                    _logger.info('\n=== map_buff = %s === \n' % map_buff)
+                    return apporteur_obj.create(map_buff)
+        else:
+            _logger.info('\n=== Agency not found ===\n')
+            return res
+        return res
+
+    @api.multi
+    def check_product(self, data):
+        if not data:
+            return False
+        product_obj = self.env['product.product']
+        product_src = product_obj.search([('default_code', '=', data.get('default_code'))])
+        if product_src:
+            return product_src
+        else:
+            _logger.info('\n=== No product found ===\n')
+            return False
+
+    @api.multi
+    def check_invoice(self, data):
+        if not data:
+            return False
+        _logger.info('\n=== data inv_vals= %s === \n' % data)
+        invoice_obj = self.env['account.invoice']
+        doms = [('pol_numpol', '=', data.get('pol_numpol'))]
+        invoice_id = invoice_obj.search(doms)
+        if invoice_id:
+            return invoice_id
+        else:
+            return invoice_obj.create(data)
+
+    @api.multi
+    def check_invoice_line(self, data):
+        if not data:
+            return False
+        line_obj = self.env['account.invoice.line']
+        doms = [('invoice_id', '=', data.get('invoice_id')), ('product_id', '=', data.get('product_id'))]
+        line_src = line_obj.search(doms)
+        if not line_src:
+            product_obj = self.env['product.product'].browse(data.get('product_id'))
+            data['account_id'] = product_obj.property_account_income.id
+            data['name'] =  product_obj.name if not product_obj.description else product_obj.description
+            line_obj.create(data)
+
+
+    @api.multi
     def map_cursor_content(self, cursor_to_map, use_map={}):
         if not cursor_to_map:
             return False
@@ -244,12 +383,10 @@ class connecteur(models.Model):
             use_map = map_gnrl
         res = []
         columns = [column[0] for column in cursor_to_map.description]
-        _logger.info('\n=== columns = %s === \n' % columns)
         for row in cursor_to_map:
             col_counter = 0
             data = {}
             for col in columns:
-                #_logger.info('\n=== %s,%s,%s === ' % (col, row[col_counter],type(row[col_counter])))
                 if type(row[col_counter]) == datetime.datetime:
                     data[col] = row[col_counter].strftime("%Y-%m-%d")
                 elif type(row[col_counter]) == decimal.Decimal:
@@ -261,8 +398,8 @@ class connecteur(models.Model):
                 else:
                     data[col] = row[col_counter]
                 col_counter += 1
-            _logger.info('\n=== data = %s === ' % data)
             res.append(data)
+        # _logger.info('\n=== res = %s === ' % res)
         return res
 
     @api.model
@@ -279,30 +416,64 @@ class connecteur(models.Model):
             # PORT=1433;DATABASE=dwh_stat;UID=sa;PWD=Aro1;TDS_Version=7.0")
             connection = pypyodbc.connect(prm)
             cursorSQLServer = connection.cursor()
-            cursorSQLServer.execute(request_sql)
+            cursorSQLServer.execute(request_sql2)
         except Exception, e:
             raise exceptions.Warning(_('Error'),
                                      _('Can\'t connect to SQL Server %s' % e))
         _logger.info('\n=== Connected  ===\n')
 
         # numenreg = 0
-        correct_data = self.map_cursor_content(cursorSQLServer)
-        resultsSQLtempdb = cursorSQLServer.fetchall()
-        mapped_datas = self.map_data(resultsSQLtempdb)
+        mapped_datas = self.map_cursor_content(cursorSQLServer)
+        #resultsSQLtempdb = cursorSQLServer.fetchall()
+        #mapped_datas = self.map_data(resultsSQLtempdb)
+        #mapped_datas = self.map_data(resultsSQLtempdb)
         #_logger.info('\n=== mapped_datas = %s === \n' % type(mapped_datas))
+        app_list = []
+        com_list = []
         for mapped_data in mapped_datas:
             # we work only with one data, not with all of them
-            invoice_vals = {'partner_id': False,
-                            'invoice_line': [(6, 0, [False])]}
+            invoice_vals = {'partner_id': False,}
+            mapped_data = self.map_specified_data(mapped_data, map_sql2)
             dpt_datas = self.dispatch_mapped_data(mapped_data)
-            #_logger.info('\n=== dpt_datas = %s === \n' % dpt_datas)
+            _logger.info('\n=== dpt_datas = %s === \n' % dpt_datas)
+            #================================================
+            # Check invoice
+            #================================================
+            invoice_vals.update(dpt_datas.get('invoice'))
             # Check res_partner_title
             #partner_title = self.check_partner_title(dpt_datas.get('partner_title'))
             # Check if customer exist
             invoice_vals['partner_id'] = self.check_partner_customer(dpt_datas.get('partner_customer'))
             if invoice_vals.get('partner_id', False):
                 invoice_vals['partner_id'] = invoice_vals.get('partner_id', False).id
-            #_logger.info('\n=== invoice_vals = %s === \n' % invoice_vals)
+            invoice_id = self.check_invoice(invoice_vals)
+            _logger.info('\n=== invoice_id = %s === \n' % invoice_id)
+            #================================================
+            # Check apporteur
+            #================================================
+            # TODO
+            appa_id = self.check_partner_apporteur(cursorSQLServer, dpt_datas.get('partner_apporteur_a'))
+            appb_id = self.check_partner_apporteur(cursorSQLServer, dpt_datas.get('partner_apporteur_b'))
+            if appa_id:
+                com_list.append({'partner_commissioned': appa_id.partner_id.id})
+                #app_list.append(appa_id.id)
+            if appb_id:
+                com_list.append({'partner_commissioned': appb_id.partner_id.id})
+                #app_list.append(appb_id.id)
+            #if app_list:
+                #invoice_vals['commission_ids'] = [(6, 0, app_list)]
+            # =======================================================
+            # Prepare invoice_line data
+            # =======================================================
+            invoice_line = dpt_datas.get('invoice_line')
+            # Check product
+            product_id = self.check_product(dpt_datas.get('product'))
+            if product_id:
+                invoice_line['product_id'] = product_id.id
+            if invoice_id:
+                invoice_line['invoice_id'] = invoice_id.id
+            _logger.info('\n=== invoice_line = %s === \n' % invoice_line)
+            inv_line_id = self.check_invoice_line(invoice_line)
             #partner_vals = {}
             #client_cour = [tdb_codeag,tdb_compte,tdb_titre,tdb_nom40,tdb_datecomptable]
             #id_client = self.voir_client(client_cour)
@@ -549,6 +720,4 @@ class connecteur(models.Model):
 
     def generer_facture(self,avenant,id_client,id_crt1,id_crt2,id_article,
                         agence,police,id_taxe,comptes):
-
-
         return
