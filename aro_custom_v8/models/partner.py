@@ -19,11 +19,12 @@ _logger = logging.getLogger(__name__)
 class res_partner(osv.osv):
     """Description """
     _inherit = 'res.partner'
-    
+
     _columns = {
         'v_neuf': fields.boolean('Client V9'),
         'stat': fields.char('Stat',size=32),
         'cif': fields.char('CIF',size=32),
+        'agency_id': fields.many2one('res.agency', 'Agency', help='Agency assigned'),
     }
 
     def v9_fetch_invoice(self,cr,uid,ids,context=None):
@@ -42,12 +43,12 @@ class res_partner(osv.osv):
                             PRM_IDENT,
                             PRM_DATE,
                             PRM_DATFINPER
-                            from F_PRIME 
-                            where 
+                            from F_PRIME
+                            where
                             PRM_PTRCLIIDENT = (
                                select
                                 BPCL_IDENT from F_P_C_CLIENT
-                                where 
+                                where
                             BPCL_PTRBPPIDENT=%s)"""%partner.ref
             cura.execute(sql)
             liste_facture=[]
@@ -96,7 +97,7 @@ class res_partner(osv.osv):
                 id_facture = elt['internal_number']
                 cura.execute("""
                         select
-                              F_PRIME_LIGNE.LPR_IDENT Id_lpr 
+                              F_PRIME_LIGNE.LPR_IDENT Id_lpr
                              ,F_PRIME_LIGNE.LPR_PTRPRMIDENT num_prime
                              ,F_PRIME_LIGNE.LPR_ASSCODCPT description
                              ,('{ ''LPR_TAXASSMT'': '+cast(F_PRIME_LIGNE.LPR_TAXASSMT as varchar)
@@ -104,28 +105,28 @@ class res_partner(osv.osv):
                               +', ''LPR_FRACIE'': '+cast(F_PRIME_LIGNE.LPR_FRACIE as varchar)
                               +'}') PRIX
                         from F_PRIME_LIGNE where F_PRIME_LIGNE.LPR_PTRPRMIDENT = '%s'
-                            and F_PRIME_LIGNE.LPR_ASSCODCPT is not null AND LPR_ASSCODCPT not like 'TVA' 
+                            and F_PRIME_LIGNE.LPR_ASSCODCPT is not null AND LPR_ASSCODCPT not like 'TVA'
                             AND LPR_ASSCODCPT not like 'TVA_AC'
-                            """%(id_facture))    
+                            """%(id_facture))
 
                 liste_ligne_facture = []
                 map={'Id_lpr':'origin',
                     'num_prime':'invoice_id',
                     'description':'name',
-                    'PRIX':'price_unit'} 
+                    'PRIX':'price_unit'}
 
-                titre_ligne_facture = [column[0] for column in cura.description] 
+                titre_ligne_facture = [column[0] for column in cura.description]
                 TE=0
                 PN=0
                 T=False
                 nouvdict={}
-                for row in cura:     
-                    count=0     
-                    invoice_line_data={}     
-                    for col in titre_ligne_facture:         
-                        if type(row[count])==decimal.Decimal:         
-                            invoice_line_data[map[col]]=int(row[count])  
-                        elif type(row[count])==str: 
+                for row in cura:
+                    count=0
+                    invoice_line_data={}
+                    for col in titre_ligne_facture:
+                        if type(row[count])==decimal.Decimal:
+                            invoice_line_data[map[col]]=int(row[count])
+                        elif type(row[count])==str:
                             if row[count][0]=='{':
                                 d = ast.literal_eval(row[count])
                                 print(d)
@@ -137,13 +138,13 @@ class res_partner(osv.osv):
 								    invoice_line_data[map[col]]=d['LPR_FRACIE']
                                 elif row[count-1]!='FRAIS':
                                     print(map[col])
-                                    T=True    
+                                    T=True
                                     invoice_line_data[map[col]]=PN
-                                    nouvdict=invoice_line_data    
+                                    nouvdict=invoice_line_data
                             else:
                                 invoice_line_data[map[col]]=row[count]
-						#invoice_line_data[map[col]]=row[count]     
-                        count+=1    
+						#invoice_line_data[map[col]]=row[count]
+                        count+=1
                     if T!=True:
                         print('insertion de: ',invoice_line_data)
                         liste_ligne_facture.append(invoice_line_data)
@@ -163,7 +164,7 @@ class res_partner(osv.osv):
                     if res_id_ligne == []:
                         print 'Insertion d\'une nouvelle ligne pour la facture: ',invoice_line['invoice_id']
                     #verification du produit dans la ligne
-                        condition_produit=[('default_code','=',invoice_line['name'])]     
+                        condition_produit=[('default_code','=',invoice_line['name'])]
                         res_liste_produit = product_obj.search(cr,uid, condition_produit)
                         if type(res_liste_produit)==list:
                             product_id=res_liste_produit[0]
@@ -213,16 +214,16 @@ class res_partner(osv.osv):
             F_P_PERSONNE.BPP_IDENT,
             F_P_PERSONNE.BPP_TITRE,
             F_P_PERSONNE.BPP_NOM_1,
-            F_P_PERSONNE.BPP_NOM_APPEL, 
+            F_P_PERSONNE.BPP_NOM_APPEL,
             F_P_PERSONNE.BPP_TEL_1,
             F_P_PERSONNE.BPP_EMAIL)
               VALUES  ('*****','%s','MR','%s','%s','%s','%s')"""%(v9_partner_id,partner.name,partner.name,partner.phone,partner.email))
             result=con_sqlsrv.commit()
             _logger.info(result)
-            
+
             ads = partner.street
             ads1 = str(ads[0:59])
-            
+
             v9_partner_adres = 999999000000+partner.id
             result=cur.execute("""insert into F_P_ADRESSE(
                 BPA_IDENT,
@@ -235,21 +236,21 @@ class res_partner(osv.osv):
                 BPA_AD_PAYS_LIBEL,
                 BPA_AD_CODPOST
             )values('%s','%s','1','%s','%s','%s','MG','Madagascar','%s')"""%(v9_partner_adres,v9_partner_id,ads1,ads1,partner.street2,partner.zip))
-            
+
             result=con_sqlsrv.commit()
             _logger.info(result)
-            
-            
+
+
             v9_partner_bnq_id = 9999999900000+partner.id
             result=cur.execute("""insert into F_P_CORD_BNQ(
-            F_P_CORD_BNQ.BPB_PTRBPPIDENT,			
+            F_P_CORD_BNQ.BPB_PTRBPPIDENT,
             F_P_CORD_BNQ.BPB_ISO_PAYS,
             F_P_CORD_BNQ.BPB_IDENT,
             BPB_CRD_NUM
             )values('%s','MG','%s','1') """%(v9_partner_id,v9_partner_bnq_id))
             result=con_sqlsrv.commit()
 
-            
+
         con_sqlsrv.close()
         self.write(cr,uid,ids,{'ref':v9_partner_id,'v_neuf':True})
         return True
